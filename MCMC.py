@@ -78,10 +78,10 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
   steps=[]
   init=[]
   variances=[]
-  # Number of repititions of simulations for each variance, we take the median of the acceptance rates and autocorrelation times. 
-  repitition = 1
-  tmpVec = numpy.array([0.0 for i in range(repitition)])
-  tmpVec2 = numpy.array([0.0 for i in range(repitition)])
+  # Number of processors = number of repititions of simulations for each variance, we take the median of the acceptance rates and autocorrelation times. 
+  procs = 2
+  tmpVec = numpy.array([0.0 for i in range(procs)])
+  tmpVec2 = numpy.array([0.0 for i in range(procs)])
   k=1
   dimensionIter=range(dimension)
   # Simulations with a higher value as autocorrelation time are neglected.
@@ -142,15 +142,25 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
     variances.append(var / dimension**(convOrder))
   # Simulate for each variance in variances.
   for var in variances:
-    for i in range(repitition):
-      result=algo.simulation(numberOfSamples, var, False, True, True, init)
+    # Do this parallel to have multiple copies
+    output = mp.Queue()
+    processes = [ mp.Process(target=algo.simulation, args = (numberOfSamples, var, output, False, True, init, )) for i in range(procs) ]
+    for p in processes:
+      p.start()
+    #for p in processes:
+      #p.join()
+    results = [output.get() for p in processes]
+    
+    i=0
+    for result in results:
+      #result=algo.simulation(numberOfSamples, var, False, True, init)
       tmp = format(result[0], '.2f')
       if result[0]>0.95:
         tmpVec2[i]=tmp
         tmpVec[i]=threshold+1
         continue
       fileName=os.path.join(directory, '{0}_{1}-{2}_{3}.png'.format(string, k, i, tmp))
-      # For analysis: mean = 0
+      # For analysis: use sample mean
       tmp2=algo.analyseData(result[1], result[2], result[3], fileName)  
       tmpVec[i] = (tmp2 / dimension**(convOrder))
       tmpVec2[i] = (tmp)
@@ -159,6 +169,7 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
       print('Acceptance rate: {0}'.format(tmp))
       print('Integrated autocorrelation: {0}'.format(tmp2 / dimension**(convOrder)))
       print('-----------------------------------------------------------')
+      i+=1
     # Take the median of acceptance rate and convergence time
     tmp2=numpy.median(tmpVec2)
     if tmp2 > 0.95:
@@ -206,7 +217,7 @@ class Algo:
     self.setDimension( dimension )
 
       
-  def simulation(self, numberOfSamples, variance, analyticGradient=False, analyseFlag=True, returnSamples=False, initialPosition=[]):
+  def simulation(self, numberOfSamples, variance, output, analyticGradient=False, analyseFlag=True, initialPosition=[]):
     """
     Main simulation.
     """
@@ -361,8 +372,8 @@ class Algo:
           else:
             covarianceMatrix[0][0] = covarianceMatrixSum
             
-    print('Acceptance rate: {0}'.format(acceptRate))
-          
+    print('Acceptance rate: {0}'.format(acceptRate))  
+        
     if analyseFlag is True:
       #print('Sample variance: {0}'.format(covarianceMatrix))
       #print('Sample mean: {0}'.format(sampleMean))
@@ -370,14 +381,12 @@ class Algo:
       print('Sample mean of dimension {1}: {0}'.format(sampleMean[analyseDim], helperDim))
       print('Sample variance of dimension {1}: {0}'.format(covarianceMatrix[analyseDim][analyseDim], helperDim))
 
-
-    if returnSamples:
-      returnValue=[]
-      returnValue.append(acceptRate)
-      returnValue.append(samples)
-      returnValue.append(sampleMean)
-      returnValue.append(covarianceMatrix)
-      return returnValue
+    returnValue=[]
+    returnValue.append(acceptRate)
+    returnValue.append(samples)
+    returnValue.append(sampleMean)
+    returnValue.append(covarianceMatrix)
+    output.put(returnValue)
     
   def analyseData(self, samples, mean, variance, printName):
     """
@@ -411,19 +420,18 @@ class Algo:
     ess=0.0
           
     temp=0.0
-    temp2=0.0
 
     flagSEM=True
     flagACT=True
     flagESS=True
 
     # Calculate lag_k for following k's
-    evaluation = numpy.arange( maxS )
+    evaluation = range( maxS )
     evaluation = evaluation[1:]
     evaluation2 = numpy.arange(numberOfSamples)
     for lag in evaluation:
 
-      evaluation2 = evaluation2[:-lag]
+      evaluation2 = evaluation2[:-1]
       # Do this expensive calculation parallel
       output = mp.Queue()
       morsel = numpy.array_split(evaluation2, procs)
@@ -436,10 +444,6 @@ class Algo:
         p.join()
       results = [output.get() for p in processes]
       tmp = numpy.sum(results)
-      #tmp=0.0
-      #for lag2 in evaluation2:
-      #  tmp += (samples[dim][lag2]-mean[dim])*(samples[dim][lag2+lag]-mean[dim])
-
       autocor[lag] = (numberOfSamples-lag)**-1 * tmp
       if (autocor[lag-1]+autocor[lag])<=0.00:
         maxS = lag
@@ -475,14 +479,11 @@ class Algo:
       pylab.subplot(311)
       pylab.suptitle('Analysis of the MCMC simulation')
       pylab.plot(lag, autocor[:maxS-1], 'r-.', label='Autocorrelation')
-      #pylab.acorr(autocor)
-      #pylab.xlabel('lag')
       pylab.ylabel('ACF', fontsize=10)
       pylab.grid(True)
       iterations=range(numberOfSamples)
       pylab.subplot(312)
       pylab.plot(iterations, samples[dim], label='First dimension of samples')
-      #pylab.xlabel('Iterations')
       pylab.ylabel('First dim of samples', fontsize=10)
       pylab.grid(True)
       pylab.subplot(313)
@@ -498,13 +499,10 @@ class Algo:
       pylab.savefig(printName)
       pylab.clf()
       newPrintName = printName.replace(".png", "ScatterPlot.png")
-      #print(newPrintName)
       self.scatterPlot3D(samples, newPrintName)
-      #pylab.show()
-
     return act
 
-  def calculateACF(self,samples, mean, lag, array, output):
+  def calculateACF(self, samples, mean, lag, array, output):
     """
     A helper function to calculate the autocorrelation coefficient parallel
     """
@@ -579,10 +577,6 @@ class Algo:
     """
     Calculate the gradient of the logarithm of your target distribution by finite differences
     """
-    # Check dimension
-    #if not position or len(position) != self._dimension+1:
-    #  raise RuntimeError('In calculateGradient: Empty argument or wrong dimension')
-    #else:
     if True:
       h = 1e-10
       grad = []
@@ -653,10 +647,6 @@ class Algo:
    if numberOfSamples < 5000:
      return 0
      
-   #print(samples)
-   #print(numberOfSamples)
-   #print(dimension)
-   
    # Sort your samples
    for it in range(numberOfSamples):
      if (it < 1000):
