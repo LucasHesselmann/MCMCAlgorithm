@@ -78,10 +78,10 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
   steps=[]
   init=[]
   variances=[]
-  # Number of processors = number of repititions of simulations for each variance, we take the median of the acceptance rates and autocorrelation times. 
-  procs = 2
-  tmpVec = numpy.array([0.0 for i in range(procs)])
-  tmpVec2 = numpy.array([0.0 for i in range(procs)])
+  # Number of repititions of simulations for each variance, we take the median of the acceptance rates and autocorrelation times. 
+  repitition = 1
+  tmpVec = numpy.array([0.0 for i in range(repitition)])
+  tmpVec2 = numpy.array([0.0 for i in range(repitition)])
   k=1
   dimensionIter=range(dimension)
   # Simulations with a higher value as autocorrelation time are neglected.
@@ -142,18 +142,8 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
     variances.append(var / dimension**(convOrder))
   # Simulate for each variance in variances.
   for var in variances:
-    # Do this parallel to have multiple copies
-    output = mp.Queue()
-    processes = [ mp.Process(target=algo.simulation, args = (numberOfSamples, var, output, False, True, init, )) for i in range(procs) ]
-    for p in processes:
-      p.start()
-    #for p in processes:
-      #p.join()
-    results = [output.get() for p in processes]
-    
-    i=0
-    for result in results:
-      #result=algo.simulation(numberOfSamples, var, False, True, init)
+    for i in range(repitition):
+      result=algo.simulation(numberOfSamples, var, False, True, init)
       tmp = format(result[0], '.2f')
       if result[0]>0.95:
         tmpVec2[i]=tmp
@@ -169,7 +159,6 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
       print('Acceptance rate: {0}'.format(tmp))
       print('Integrated autocorrelation: {0}'.format(tmp2 / dimension**(convOrder)))
       print('-----------------------------------------------------------')
-      i+=1
     # Take the median of acceptance rate and convergence time
     tmp2=numpy.median(tmpVec2)
     if tmp2 > 0.95:
@@ -217,7 +206,7 @@ class Algo:
     self.setDimension( dimension )
 
       
-  def simulation(self, numberOfSamples, variance, output, analyticGradient=False, analyseFlag=True, initialPosition=[]):
+  def simulation(self, numberOfSamples, variance, analyticGradient=False, analyseFlag=True, initialPosition=[]):
     """
     Main simulation.
     """
@@ -294,10 +283,7 @@ class Algo:
         for dim in range(dimension):
           mean[dim] = x[dim]
       elif algoType in ['MALA']:
-        if analyticGradient is True:
-          grad = gradientMethod(targetDistribution, x)
-        else:
-          grad = gradientMethod(targetDistribution, x )
+        grad = gradientMethod(targetDistribution, x )
         for dim in range(dimension):
           mean[dim] = x[dim] + 0.5*variance*grad[dim]
         
@@ -386,7 +372,7 @@ class Algo:
     returnValue.append(samples)
     returnValue.append(sampleMean)
     returnValue.append(covarianceMatrix)
-    output.put(returnValue)
+    return returnValue
     
   def analyseData(self, samples, mean, variance, printName):
     """
