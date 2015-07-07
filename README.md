@@ -1,5 +1,3 @@
-# Thesis
-Master thesis
 =======
 MonteCarlo
 ==========
