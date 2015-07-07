@@ -1,0 +1,167 @@
+\documentclass[10pt, a4paper, openright, twoside, final, DIV10, BCOR8.25mm ]{scrreprt}
+
+\usepackage[USenglish]{babel}
+\usepackage{MA_Titlepage}
+
+%europäischer Zeichensatz/Silbentrennung
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+%Eingabe von Sonderzeichen
+\usepackage[utf8]{inputenc}
+%schönerer Textsatz
+\usepackage{microtype}
+\usepackage{ellipsis}
+%for filler Textsatz
+\usepackage{lipsum}
+%für mathematische Formeln
+\usepackage{latexsym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+%für die Aufzählungszeichen
+\usepackage{paralist}
+%für Gleichungen
+\usepackage{amsmath}
+%Numbering according to sections
+\numberwithin{equation}{section}
+%fuer Algorithmen
+\usepackage[boxed,lined,linesnumbered]{algorithm2e}
+%für newtheorem
+\usepackage{amsthm}
+%für Skriptbuchstaben
+\usepackage{mathrsfs}
+% for graphics
+\usepackage{graphicx} 
+%no indentation
+%\parindent0pt 
+% for subcaptions
+\usepackage{subcaption}
+
+%Headers and footers
+\usepackage{scrlayer-scrpage}
+\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}{}} % redefine sectionmark
+\lohead{\leftmark}
+\lehead{Optimal Scaling of Metropolis-Hastings algorithms}
+% \rohead{\thepage}
+% \lehead{\thepage}
+\pagestyle{scrheadings}
+% \usepackage{fancyhdr}
+% \pagestyle{fancy}
+% \fancyhead{} % clear all header fields
+% \fancyfoot{} % clear all footer fields
+% \renewcommand{\headrulewidth}{0.0pt}
+% \renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}{}} % redefine sectionmark
+% \fancyhead[RO,LE]{\thepage}
+% \fancyhead[LO]{\rightmark}
+% \fancyhead[RE]{Optimal Scaling of Metropolis-Hastings algorithms}
+
+%Literaturverzeichnis
+\usepackage[
+	babel, 
+	english=american
+]{csquotes}
+\usepackage[
+	backend=biber,
+	style=alphabetic
+]{biblatex}
+\bibliography{references}
+
+% set colors for links and URLs
+\usepackage[
+	colorlinks=true,
+	urlcolor=blue,
+	linkcolor=blue,
+	citecolor=green
+]{hyperref}
+
+%Set length for new paragraph
+\setlength{\parskip}{0em}
+
+
+%Name of the author of the thesis 
+\authornew{Lucas Frederic Marcus Hesselmann}
+%Date of birth of the Author
+\geburtsdatum{August 10, 1988}
+%Place of Birth
+\geburtsort{Osnabrück, Germany}
+%Date of submission of the thesis
+\date{\today}
+
+%Name of the Advisor
+% z.B.: Prof. Dr. Peter Koepke
+\betreuer{Advisor: Prof.\,Dr.\,Andreas Eberle}
+%Name of the Insitute of the advisor
+%z.B.: Mathematisches Institut
+\institut{Institute for Applied Mathematics}
+%Title of the thesis
+\title{Optimal scaling for Metropolis-Hastings algorithms}
+%Do not change!
+\ausarbeitungstyp{Master's Thesis  Mathematics}
+
+%Theoremstyles
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}
+\newtheorem{prop}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{claim}{Claim}
+
+\theoremstyle{definition}
+\newtheorem{defin}{Definition}
+
+\theoremstyle{remark}
+\newtheorem{rem}{Remark}
+
+\renewcommand{\sc}{\textsc}
+
+\begin{document}
+
+\pagestyle{empty} %get rid of header/footer for toc page
+
+\maketitle
+
+\pagestyle{plain}
+
+\input{abstract} %abstract
+
+\cleardoublepage %start new page
+
+\tableofcontents %put toc in
+
+\cleardoublepage %start new page
+
+\pagestyle{scrheadings} % put headers/footers back on
+\pagenumbering{arabic}
+
+\setcounter{page}{1} %reset the page counter
+
+% Include the content separately
+
+\input{introduction} %introduction
+
+
+\input{Metropolis-HastingsAlgorithm}
+
+
+\input{Complexity}
+
+
+\input{Application}
+
+
+\input{Diffusion}
+
+
+\input{Numerical}
+
+
+%\input{invariancePrinciple}
+
+
+\appendix
+
+\printbibliography
+
+%\input{appendix}
+
+%\clearpage
+
+\end{document}
