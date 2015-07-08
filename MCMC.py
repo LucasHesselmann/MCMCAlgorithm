@@ -1,5 +1,12 @@
 #! /usr/bin/env python3.4
 
+"""
+July, 2015
+Lucas Hesselmann
+Master thesis "Optimal Scaling of Metropolis-Hastings methods"
+Supervisor: Prof. Dr. Andreas Eberle
+"""
+
 import sys
 import os
 import numpy
@@ -31,7 +38,7 @@ def multiDimDiagramm(string, numberOfSamples, directoryName, resultName):
   colours=['r','g','b','k','y','c','m']
   
   # How many different dimensions? in [1, 6] #
-  d = 7
+  d = 3
   #------------------------------------------#
 
   k=0
@@ -42,8 +49,10 @@ def multiDimDiagramm(string, numberOfSamples, directoryName, resultName):
   
   pylab.figure()
   # Make diagramm for several dimensions
-  #dimensions=[5, 10, 20, 30, 50, 100]
-  dimensions=[1,2,3,4,5,8,10]
+  # LARGE Dimensions
+  dimensions=[5, 10, 20, 30, 50, 100]
+  # SMALL Dimensions
+  #dimensions=[1,2,3,5,8,10]
   if string in ['MALA']:
     x = 0.13
     y = 0.92
@@ -58,7 +67,6 @@ def multiDimDiagramm(string, numberOfSamples, directoryName, resultName):
     autocor.append(result[1])
     p.append( numpy.poly1d(numpy.polyfit(acceptRate[dim], autocor[dim], 4)) )
     pylab.plot(acceptRate[dim], autocor[dim], 'm.', xp, p[dim](xp), '--', color=colours[dim], label='Convergence time')
-    #pylab.plot(result[0], result[1], colours[k], label='Convergence time')
     pylab.ylabel('convergence time')
     pylab.xlabel('acceptance rate')
     pylab.grid(True)
@@ -67,7 +75,6 @@ def multiDimDiagramm(string, numberOfSamples, directoryName, resultName):
     pylab.clf()
     pylab.figure()
     pylab.plot(acceptRate[dim], autocor[dim], 'm.', color=colours[dim], label='Convergence time')
-    #pylab.plot(result[0], result[1], colours[k], label='Convergence time')
     pylab.ylabel('convergence time')
     pylab.xlabel('acceptance rate')
     pylab.grid(True)
@@ -78,7 +85,7 @@ def multiDimDiagramm(string, numberOfSamples, directoryName, resultName):
   pylab.figure()
   for dim in range(d):    
     pylab.plot( xp, p[dim](xp), colours[dim], label=dimensions[dim] )
-  #pylab.plot(acceptRate[0], autocor[0], colours[0], acceptRate[1], autocor[1], colours[1], acceptRate[2], autocor[2], colours[2], acceptRate[3], autocor[3], colours[3], label='Convergence time')
+  pylab.plot(acceptRate[0], autocor[0], colours[0], acceptRate[1], autocor[1], colours[1], acceptRate[2], autocor[2], colours[2], acceptRate[3], autocor[3], colours[3], label='Convergence time')
   pylab.ylabel('scaled autocorrelation time')
   pylab.xlabel('acceptance rate')
   pylab.legend()
@@ -99,29 +106,6 @@ def multiDimDiagramm(string, numberOfSamples, directoryName, resultName):
   newPrintName = fileName1.replace(".png", "_2.png")
   pylab.savefig(newPrintName) 
   pylab.clf()
-  # Other markers
-  pylab.figure()
-  for dim in range(d):    
-    pylab.plot( acceptRate[dim], autocor[dim], '>', color=colours[dim], label=dimensions[dim] )
-  pylab.ylabel('scaled autocorrelation time')
-  pylab.xlabel('acceptance rate')
-  pylab.legend()
-  #pylab.ylim([10.0, 50.0])
-  pylab.grid(True)
-  newPrintName = fileName1.replace(".png", "_3.png")
-  pylab.savefig(newPrintName) 
-  # Other markers
-  pylab.figure()
-  for dim in range(d):    
-    pylab.plot( acceptRate[dim], autocor[dim], '.', color=colours[dim], label=dimensions[dim] )
-  pylab.ylabel('scaled autocorrelation time')
-  pylab.xlabel('acceptance rate')
-  pylab.legend()
-  #pylab.ylim([10.0, 50.0])
-  pylab.grid(True)
-  newPrintName = fileName1.replace(".png", "_4.png")
-  pylab.savefig(newPrintName) 
-
   pylab.close('all')
   
   return 'Done'
@@ -154,7 +138,7 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
   k=1
   dimensionIter=range(dimension)
   # Simulations with a higher value as autocorrelation time are neglected.
-  threshold = 15
+  threshold = 500
   # Set order of convergence depending of algorithm type
   if string in ['MALA']:
     convOrder=1.0/3.0
@@ -195,7 +179,7 @@ def makeDiagramm(string, dimension, numberOfSamples, directoryName, resultName):
   # Simulate for each variance in variances.
   for var in variances:
     for i in range(repitition):
-      result=algo.simulation(numberOfSamples, var, False, True, init)
+      result=algo.simulation(numberOfSamples, var, True, True, init)
       tmp = format(result[0], '.2f')
       if ((string in ['RWM'] and (result[0]>0.85 or result[0]<0.04)) or (string in ['MALA'] and (result[0]<0.14 or result[0]>0.95))):#0.98 0.15
         tmpVec2[i]=tmp
@@ -315,7 +299,7 @@ def calculateSEM(string, dimension, numberOfSamples, directoryName, resultName):
     # Take the mean of acceptance rate and convergence time
     tmp2=numpy.mean(tmpVec2, dtype=numpy.float64)
     tmp=numpy.mean(tmpVec, dtype=numpy.float64)
-    # Calculate root mean square error
+    # Calculate standard deviation
     for i in range(repitition):
       tmpVec[i] += -tmp
     rsme = numpy.sqrt(numpy.mean(numpy.square(tmpVec)))
@@ -323,7 +307,7 @@ def calculateSEM(string, dimension, numberOfSamples, directoryName, resultName):
     print('The median of loop {0}'.format(k))
     print('Acceptance rate: {0}'.format(tmp2))
     print('Standard Error of the Mean: {0}'.format(tmp))
-    print('Root Mean Squared Error: {0}'.format(rsme))
+    print('Standard Deviation: {0}'.format(rsme))
     print('-----------------------------------------------------------')
     k+=1
     if string in ['MALA']:
@@ -353,6 +337,22 @@ class Algo:
   def simulation(self, numberOfSamples, variance, analyticGradient=False, analyseFlag=True, initialPosition=[]):
     """
     Main simulation.
+    
+    Short Manual: [For a simple simulation (no images)]
+    algo = MCMC.Algo('MALA', 10, 10000)
+    algo.simulation(200000, 1.5)
+
+    numberOfSamples = the number of samples which should be generated
+    variance = the proposal variance
+    analyticGradient = if False, the algorithm uses finite differences; if True, a gradient method should be implemented for the density
+    analyseFlag = if True, the sample mean and sample covariance is calculated
+    initialPosition = initial value for MCMC algorithm
+
+    You have to choose the target distribution. Three different distributions are implemented:
+    a multidimensional Gaussian,
+    a multimodal Gaussian,
+    a changed Gaussian.
+    Target distributions have to be implemented as function. They can be found at the end of the file.
     """
     dimension = int(self._dimension)
     initialPosition
@@ -368,17 +368,22 @@ class Algo:
     acceptance = False
     # Print the sample mean and sample covariance
     printMean=False
-    # Set method to calculate the gradient for MALA
-    if analyticGradient:
-      #gradientMethod=self.evaluateGradientOfMultimodalGaussian
-      gradientMethod=self.evaluateGradientOfGaussian
-    else:
-      gradientMethod=self.calculateGradient
+
     #  ---------- HERE YOU HAVE TO CHOOSE ----------
     # Set target distribution 
     #targetDistribution=self.evaluateGaussian
-    #targetDistribution=self.evaluateMultimodalGaussian
-    targetDistribution=self.evaluateChangedGaussian
+    targetDistribution=self.evaluateMultimodalGaussian
+    #targetDistribution=self.evaluateChangedGaussian
+
+    # Set method to calculate the gradient for MALA
+    if analyticGradient:
+      gradientMethod=self.evaluateGradientOfMultimodalGaussian
+      #gradientMethod=self.evaluateGradientOfGaussian
+    else:
+      gradientMethod=self.calculateGradient
+
+    # Choose if only the first component should be analyzed (True) or all components (False)
+    simpleAnalysis=True
     # ------------------- END ----------------------
     # Temporary samples
     x = []
@@ -388,7 +393,6 @@ class Algo:
     mean = [0.0 for i in range(dimension)]
     # Flag for a simple analysis of only one dimension and the prefered dimension
     analyseDim=0
-    simpleAnalysis=True
     # Some helpers
     tmp=[]
     sampleMean=[0.0 for i in range(dimension)]
@@ -533,6 +537,8 @@ class Algo:
   def analyseData(self, samples, mean, variance, printName, allSampleMean = [], allCovariance = []):
     """
     Here we analyse only the first component (for the sake of simplicity)
+
+    This routine analyzes the chain and calculates all estimators and makes all plots.
     """
           
     print('Analysing sampled data...')
@@ -588,7 +594,7 @@ class Algo:
       tmp = numpy.sum(results)
       autocor[lag] = (numberOfSamples-lag)**-1 * tmp
       # noise affects autocorrelation -> stop when near zero
-      if (autocor[lag-1]+autocor[lag])<=0.01:
+      if (autocor[lag-1]+autocor[lag])<=0.0001:
         maxS = lag
         break
       percentage = format(100*lag/maxS, '.2f')
@@ -622,7 +628,7 @@ class Algo:
     print('Effective Sample Size: {0}'.format(ess))   
 
     #Print some results
-    if False:
+    if True:
       if True:
         iterations=range(numberOfSamples)
         pylab.plot(iterations, allSampleMean, label='Sample mean')
@@ -643,13 +649,10 @@ class Algo:
         pylab.savefig(newPrintName)
         pylab.clf()      
 
-      maxS = 41
       lag=range(maxS-1)
-      #pylab.subplot(311)
-      #pylab.suptitle('Analysis of the MCMC simulation')
       pylab.plot(lag, autocor[:maxS-1], 'r', label='Autocorrelation')
       pylab.ylabel('ACF', fontsize=10)
-      pylab.xlabel('Iterations', fontsize=10)
+      pylab.xlabel('Lag', fontsize=10)
       pylab.grid(True)
       newPrintName = printName.replace(".png", "_1.png")
       pylab.savefig(newPrintName)
@@ -657,14 +660,13 @@ class Algo:
 
       pylab.plot(lag, allSem[:maxS-1], 'r', label='sem')
       pylab.ylabel('Standard error of the mean', fontsize=10)
-      pylab.xlabel('Iterations', fontsize=10)
+      pylab.xlabel('Lag', fontsize=10)
       pylab.grid(True)
       newPrintName = printName.replace(".png", "_sem.png")
       pylab.savefig(newPrintName)
       pylab.clf()
 
       iterations=range(numberOfSamples)
-      #pylab.subplot(312)
       pylab.plot(iterations, samples[dim], label='First dimension of samples')
       pylab.ylabel('First dim of samples', fontsize=10)
       pylab.xlabel('Iterations', fontsize=10)
@@ -673,14 +675,15 @@ class Algo:
       newPrintName = printName.replace(".png", "_2.png")
       pylab.savefig(newPrintName)
       pylab.clf()
-      
-      #pylab.subplot(313)
+
       num_bins=100
       n, bins, patches=pylab.hist(samples[dim], num_bins, normed=1, facecolor='green', alpha=0.5, label='Histogram of the first dimension')
+      #------------- CHOOSE APPROPRIATE FIRST DIMENSION DENSITY ---------------------------
       # add a 'best fit' line
       #y = 1.0 * mlab.normpdf(bins, 0.0, 1) + 0.0 * mlab.normpdf(bins, 3.0, 1)
-      y = 1.0 * mlab.normpdf(bins, 0.0, 1)
-      #y = 0.5 * mlab.normpdf(bins, -2.0, 1.0) + 0.5 * mlab.normpdf(bins, 2.0, 1.0)
+      #y = 1.0 * mlab.normpdf(bins, 0.0, 1)
+      y = 0.5 * mlab.normpdf(bins, -2.0, 1.0) + 0.5 * mlab.normpdf(bins, 2.0, 1.0)
+      #-----------------------------------------------------------------------------------
       plt.plot(bins, y, 'r--')
       pylab.xlabel('First dimension of samples', fontsize=10)
       pylab.ylabel('Relative frequency', fontsize=10)
@@ -688,9 +691,8 @@ class Algo:
       pylab.grid(True)
       newPrintName = printName.replace(".png", "_3.png")
       pylab.savefig(newPrintName)
-
-      #pylab.savefig(printName)
       pylab.clf()
+      # Do the scatter plot and histogram
       if True:
         newPrintName = printName.replace(".png", "Plot.png")
         self.scatterPlot3D(samples, newPrintName)
@@ -704,9 +706,10 @@ class Algo:
       pylab.grid(True)
       pylab.savefig(newPrintName)
       pylab.close('all')
-    if False:
-      return act
+    # For the function calculateSEM: first: False, second: True.
     if True:
+      return act
+    if False:
       return sem
 
   def calculateACF(self, samples, mean, lag, array, output):
@@ -717,6 +720,95 @@ class Algo:
     for lag2 in array:
       tmp += (samples[lag2]-mean)*(samples[lag2+lag]-mean)
     output.put(tmp)
+
+#-------------------------------------------------------------------------------------------------
+# Some further analysis plot functions
+
+  def scatterPlot3D(self, samples, printName):
+   """
+   Plot samples in 3D as cloud.
+   """
+   vec = [ [ [],[],[] ] for i in range(6) ] 
+   xs = []
+   ys = []
+   zs = []
+   
+   fig = plt.figure()
+   ax = fig.add_subplot(111, projection='3d')
+
+   # Control number and dimension of samples
+   helper=numpy.shape(samples)
+   dimension=helper[0]
+   numberOfSamples=helper[1]
+   if numberOfSamples < 5000:
+     return 0
+     
+   # Sort your samples
+   for it in range(numberOfSamples):
+     if (it < 500):
+       vec[0][0].append(samples[0][it])
+       vec[0][1].append(samples[1][it])
+       vec[0][2].append(samples[2][it])
+     elif (it >= 500 and it < 1000):
+       vec[1][0].append(samples[0][it])
+       vec[1][1].append(samples[1][it])
+       vec[1][2].append(samples[2][it])
+     elif (it >= 1000 and it < 1500):
+       vec[2][0].append(samples[0][it])
+       vec[2][1].append(samples[1][it])
+       vec[2][2].append(samples[2][it])
+     elif (it >= 1500 and it < 2000):
+       vec[3][0].append(samples[0][it])
+       vec[3][1].append(samples[1][it])
+       vec[3][2].append(samples[2][it])
+     elif (it >= 2000 and it < 2500):
+       vec[4][0].append(samples[0][it])
+       vec[4][1].append(samples[1][it])
+       vec[4][2].append(samples[2][it])
+     elif (it >= 2500 and it < 5000):
+       vec[5][0].append(samples[0][it])
+       vec[5][1].append(samples[1][it])
+       vec[5][2].append(samples[2][it])
+     else:
+       break
+
+   # Make scatterplots
+   for c, sample in [('r', vec[0]), ('y', vec[1]), ('g', vec[2]), ('c', vec[3]), ('b', vec[4])]:
+     xs = sample[0]
+     ys = sample[1]
+     zs = sample[2]
+     ax.scatter(xs, ys, zs, c=c, marker='.')
+     
+   ax.set_xlabel('X ')
+   ax.set_ylabel('Y ')
+   ax.set_zlabel('Z ')
+   ax.set_xlim([-6.0, 6.0])
+   ax.set_ylim([-3.0, 3.0])
+   ax.set_zlim([-3.0, 3.0])
+   ax.view_init(25, 105)#23,98
+   pylab.savefig(printName, dpi=200)
+   pylab.clf()
+
+
+  def Histogram3D(self, samples, printName):
+   """
+   Plot histogram of 2D samples.
+   """
+   fig=plt.figure()
+   ax = fig.add_subplot(111)
+
+   x = samples[0]
+   y = samples[1]
+
+   H, xedges, yedges, img = ax.hist2d(x, y, bins=80, norm=LogNorm())
+   ax.set_xlabel('X ')
+   ax.set_ylabel('Y ')
+   ax.set_xlim([-6.0, 6.0])
+   ax.set_ylim([-4.0, 4.0])
+   pylab.savefig(printName, dpi=200)
+   pylab.clf()
+
+#--------------------------------------------------------------------------------
       
   def setAlgoType(self, Algo):
     self._algoType = Algo
@@ -729,6 +821,72 @@ class Algo:
       
   def setDimension(self, dimension):
     self._dimension = dimension
+ 
+      
+  def calculateGradient(self, evaluateTargetDistribution, position):
+    """
+    Calculate the gradient of the logarithm of your target distribution by finite differences
+    """
+    if True:
+      h = 1e-10
+      grad = []
+      shiftedpos1 = []
+      shiftedpos2 = []
+      for dim in range(self._dimension):
+        shiftedpos1.append( position[dim] )
+        shiftedpos2.append( position[dim] )
+      for dim in range(self._dimension):
+        shiftedpos1[dim] += h
+        shiftedpos2[dim] -= h
+        tmp1=evaluateTargetDistribution(shiftedpos1)
+        # Check if value of the target distribution is not to small
+        if tmp1 <= 0.0:
+          tmp1=h
+        tmp2=evaluateTargetDistribution(shiftedpos2)
+        if tmp2 <= 0.0:
+          tmp2=h
+        grad.append(0.5 * h**-1 * ( math.log(tmp1)-math.log(tmp2) ))
+        shiftedpos1[dim] -= h
+        shiftedpos2[dim] += h
+      return grad
+        
+  def generateGaussian(self, mean, variance):
+    """
+    Generates one-dimensional Gaussian random variable 
+    """
+    gauss=random.gauss(mean, math.sqrt(variance))
+    return gauss
+    
+  def acceptanceStep(self, evaluateTargetDistribution, calculateGradient,  proposal=[], position=[], mean=[], variance=None):
+    """
+    Determines wether the proposal is accepted or rejected.
+    """
+    u = random.uniform(0,1)
+    ratio = ( evaluateTargetDistribution(proposal) )/( evaluateTargetDistribution(position) )
+    # Calculate the ratio of the transition kernels
+    if self._algoType in ['MALA']:
+      tmp2=0.0
+      grad = calculateGradient( evaluateTargetDistribution, proposal )
+      for dim in range(self._dimension):
+        tmp = proposal[dim] + 0.5*variance*grad[dim]
+        tmp2 += -(mean[dim]-proposal[dim])**2 + (tmp-position[dim])**2
+      tmp = 0.5*variance**-1 * tmp2
+      if ( tmp > 100. ):
+        tmp = 100.
+      elif ( tmp < -100. ):
+        tmp = -100.
+      ratio *= math.exp(-tmp)
+    if u < ratio:
+      proposal[self._dimension]=True
+      return proposal
+    else:
+      position[self._dimension]=False
+      return position
+
+#------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------
+# Here are the target distributions defined. 
+# First the evaluation of the densities and if necessary also the evaluation of the log gradients.
     
   def evaluateMultimodalGaussian(self, position=[]):
     """
@@ -808,185 +966,5 @@ class Algo:
       value *=  math.exp(-0.5*(position[dim])**2 *(sigma2**-1 + dim**(2*s)) )
     return value
     
-     
-      
-  def calculateGradient(self, evaluateTargetDistribution, position):
-    """
-    Calculate the gradient of the logarithm of your target distribution by finite differences
-    """
-    if True:
-      h = 1e-10
-      grad = []
-      shiftedpos1 = []
-      shiftedpos2 = []
-      for dim in range(self._dimension):
-        shiftedpos1.append( position[dim] )
-        shiftedpos2.append( position[dim] )
-      for dim in range(self._dimension):
-        shiftedpos1[dim] += h
-        shiftedpos2[dim] -= h
-        tmp1=evaluateTargetDistribution(shiftedpos1)
-        # Check if value of the target distribution is not to small
-        if tmp1 <= 0.0:
-          tmp1=h
-        tmp2=evaluateTargetDistribution(shiftedpos2)
-        if tmp2 <= 0.0:
-          tmp2=h
-        grad.append(0.5 * h**-1 * ( math.log(tmp1)-math.log(tmp2) ))
-        shiftedpos1[dim] -= h
-        shiftedpos2[dim] += h
-      return grad
-        
-  def generateGaussian(self, mean, variance):
-    """
-    Generates one-dimensional Gaussian random variable 
-    """
-    gauss=random.gauss(mean, math.sqrt(variance))
-    return gauss
-    
-  def acceptanceStep(self, evaluateTargetDistribution, calculateGradient,  proposal=[], position=[], mean=[], variance=None):
-    """
-    Determines wether the proposal is accepted or rejected.
-    """
-    u = random.uniform(0,1)
-    ratio = ( evaluateTargetDistribution(proposal) )/( evaluateTargetDistribution(position) )
-    # Calculate the ratio of the transition kernels
-    if self._algoType in ['MALA']:
-      tmp2=0.0
-      grad = calculateGradient( evaluateTargetDistribution, proposal )
-      for dim in range(self._dimension):
-        tmp = proposal[dim] + 0.5*variance*grad[dim]
-        tmp2 += -(mean[dim]-proposal[dim])**2 + (tmp-position[dim])**2
-      tmp = 0.5*variance**-1 * tmp2
-      if ( tmp > 100. ):
-        tmp = 100.
-      elif ( tmp < -100. ):
-        tmp = -100.
-      ratio *= math.exp(-tmp)
-    if u < ratio:
-      proposal[self._dimension]=True
-      return proposal
-    else:
-      position[self._dimension]=False
-      return position
-
-  def scatterPlot3D(self, samples, printName):
-   """
-   Plot samples in 3D as cloud.
-   """
-   vec = [ [ [],[],[] ] for i in range(5) ] 
-   xs = []
-   ys = []
-   zs = []
-   
-   fig = plt.figure()
-   ax = fig.add_subplot(111, projection='3d')
-
-   # Control number and dimension of samples
-   helper=numpy.shape(samples)
-   dimension=helper[0]
-   numberOfSamples=helper[1]
-   if numberOfSamples < 5000:
-     return 0
-     
-   # Sort your samples
-   for it in range(numberOfSamples):
-     if (it < 500):
-       vec[0][0].append(samples[0][it])
-       vec[0][1].append(samples[1][it])
-       vec[0][2].append(samples[2][it])
-     elif (it >= 500 and it < 1000):
-       vec[1][0].append(samples[0][it])
-       vec[1][1].append(samples[1][it])
-       vec[1][2].append(samples[2][it])
-     elif (it >= 1000 and it < 1500):
-       vec[2][0].append(samples[0][it])
-       vec[2][1].append(samples[1][it])
-       vec[2][2].append(samples[2][it])
-     elif (it >= 1500 and it < 2000):
-       vec[3][0].append(samples[0][it])
-       vec[3][1].append(samples[1][it])
-       vec[3][2].append(samples[2][it])
-     elif (it >= 2000 and it < 2500):
-       vec[4][0].append(samples[0][it])
-       vec[4][1].append(samples[1][it])
-       vec[4][2].append(samples[2][it])
-     else:
-       break
-
-   # Make scatterplots
-   for c, sample in [('r', vec[0]), ('y', vec[1]), ('g', vec[2]), ('c', vec[3]), ('b', vec[4])]:
-     xs = sample[0]
-     ys = sample[1]
-     zs = sample[2]
-     ax.scatter(xs, ys, zs, c=c, marker='o')
-     
-   ax.set_xlabel('X ')
-   ax.set_ylabel('Y ')
-   ax.set_zlabel('Z ')
-   ax.set_xlim([-6.0, 6.0])
-   ax.set_ylim([-3.0, 3.0])
-   ax.set_zlim([-3.0, 3.0])
-   ax.view_init(23, 98)
-   pylab.savefig(printName, dpi=200)
-   #plt.show()
-   pylab.clf()
-
-
-  def Histogram3D(self, samples, printName):
-   """
-   Plot histogram of 2D samples.
-   """
-   fig=plt.figure()
-   ax = fig.add_subplot(111)
-
-   x = samples[0]
-   y = samples[1]
-
-   H, xedges, yedges, img = ax.hist2d(x, y, bins=50, norm=LogNorm())
-   #extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
-   #im = ax.imshow(H, cmap=plt.cm.jet)#, extent=extent)
-   #fig.colorbar(im, ax=ax)
-   ax.set_xlabel('X ')
-   ax.set_ylabel('Y ')
-   ax.set_xlim([-6.0, 6.0])
-   ax.set_ylim([-4.0, 4.0])
-   pylab.savefig(printName, dpi=200)
-   #pylab.show()
-   pylab.clf()
-
-
-def TestVariance (string, dimension, variance, numberOfSamples, resultName):
-  """
-  Test one variance.
-  """
-  algo = Algo(string, dimension, 1)
-  result = algo.simulation(numberOfSamples, variance, True, True, [2.0])
-  tmp = algo.analyseData(result[1], [0.0], result[3], resultName)
-   
-	
-#makeDiagramm('MALA', 10, 1000, 'GEANY01', 'ACT')
-#algo=Algo('RWM', 3)
-#samples=algo.simulation(10000, 2.2, analyticGradient=False, analyseFlag=False, returnSamples=True)
-#algo.scatterPlot3D(samples[1])
-
-#   fig=plt.figure()
-#   ax = fig.add_subplot(111, projection='3d')
-#  
-#   x = samples[0]
-#   y = samples[1]
-#   hist, xedges, yedges = numpy.histogram2d(x, y, bins=12)
-#   elements = (len(xedges) - 1) * (len(yedges) - 1)
-#   xpos, ypos = numpy.meshgrid(xedges[:-1]+0.25, yedges[:-1]+0.25)
-#   xpos = xpos.flatten()
-#   ypos = ypos.flatten()
-#   zpos = numpy.zeros(elements)
-#   dx = 0.5 * numpy.ones_like(zpos)
-#   dy = dx.copy()
-#   dz = hist.flatten()
-#   
-#   ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='b', zsort='average')
-#   ax.view_init(28, 13)
-#   pylab.savefig(printName, dpi=200)
-#   #pylab.show()
-#   pylab.clf()
+#--------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------    
